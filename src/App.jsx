@@ -159,6 +159,44 @@ export default function App() {
     if (el) fieldRefs.current[`${id}-${field}`] = el;
   }
 
+  function focusField(id, field) {
+    const el = fieldRefs.current[`${id}-${field}`];
+    if (!el) return;
+    el.focus({ preventScroll: true });
+    el.select();
+    requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }
+
+  function handleInputFocus(e) {
+    const input = e.target;
+    requestAnimationFrame(() => input.select());
+  }
+
+  function handleFieldKeyDown(e, subjectId, field) {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+
+    const index = subjects.findIndex((s) => s.id === subjectId);
+    if (index === -1) return;
+
+    if (field === "name") {
+      focusField(subjectId, "credits");
+      return;
+    }
+    if (field === "credits") {
+      focusField(subjectId, "gpa");
+      return;
+    }
+    if (field === "gpa") {
+      const next = subjects[index + 1];
+      if (next) {
+        focusField(next.id, "gpa");
+      }
+    }
+  }
+
   function clearFieldError(id, field) {
     setFieldError((prev) =>
       prev?.id === id && prev?.field === field ? null : prev
@@ -214,13 +252,7 @@ export default function App() {
   }
 
   function scrollToField(id, field) {
-    const el = fieldRefs.current[`${id}-${field}`];
-    if (!el) return;
-
-    setTimeout(() => {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-      el.focus({ preventScroll: true });
-    }, 50);
+    setTimeout(() => focusField(id, field), 50);
   }
 
   function handleGenerateSgpa() {
@@ -268,9 +300,9 @@ export default function App() {
       <CustomCursor />
       <FloatingBackground />
 
-      <div className="relative z-10 min-h-screen overflow-x-hidden px-4 py-8">
-        <div className="relative mx-auto flex min-h-[calc(100vh-4rem)] max-w-3xl flex-col justify-center">
-          <div className="liquid-glass rounded-[2.5rem] p-6 sm:p-8">
+      <div className="app-shell relative z-10 min-h-[100dvh] w-full max-w-[100vw] overflow-x-hidden px-4 py-6 sm:py-8">
+        <div className="relative mx-auto flex w-full max-w-3xl flex-col justify-center py-2">
+          <div className="liquid-glass w-full max-w-full overflow-hidden rounded-[2.5rem] p-5 sm:p-8">
             <header className="relative z-10 mb-8 text-center">
               <div className="liquid-icon-orb mx-auto mb-4">
                 <Sparkles className="h-5 w-5 text-violet-600" />
@@ -297,7 +329,7 @@ export default function App() {
                   className="liquid-row animate-fadeInUp p-4 md:grid md:grid-cols-[1fr_110px_90px_44px] md:items-start md:gap-3 md:p-3"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
-                  <div className="relative z-10 mb-3 md:mb-0">
+                  <div className="relative z-10 mb-3 min-w-0 md:mb-0">
                     <label className="mb-1.5 block text-xs font-semibold text-slate-600 md:sr-only">
                       Subject Name
                     </label>
@@ -308,6 +340,11 @@ export default function App() {
                       onChange={(e) =>
                         updateSubject(subject.id, "name", e.target.value)
                       }
+                      onFocus={handleInputFocus}
+                      onKeyDown={(e) =>
+                        handleFieldKeyDown(e, subject.id, "name")
+                      }
+                      enterKeyHint="next"
                       className={`liquid-input ${
                         fieldHasError(subject.id, "name") ? "liquid-input-error" : ""
                       }`}
@@ -318,8 +355,8 @@ export default function App() {
                     )}
                   </div>
 
-                  <div className="relative z-10 mb-3 grid grid-cols-2 gap-3 md:mb-0 md:contents">
-                    <div>
+                  <div className="relative z-10 mb-3 grid min-w-0 grid-cols-2 gap-3 md:mb-0 md:contents">
+                    <div className="min-w-0">
                       <label className="mb-1.5 block text-xs font-semibold text-slate-600 md:sr-only">
                         Credit Hours
                       </label>
@@ -331,6 +368,11 @@ export default function App() {
                         onChange={(e) =>
                           handleCreditsChange(subject.id, e.target.value)
                         }
+                        onFocus={handleInputFocus}
+                        onKeyDown={(e) =>
+                          handleFieldKeyDown(e, subject.id, "credits")
+                        }
+                        enterKeyHint="next"
                         className={`liquid-input text-center ${
                           fieldHasError(subject.id, "credits")
                             ? "liquid-input-error"
@@ -344,7 +386,7 @@ export default function App() {
                       )}
                     </div>
 
-                    <div>
+                    <div className="min-w-0">
                       <label className="mb-1.5 block text-xs font-semibold text-slate-600 md:sr-only">
                         GPA
                       </label>
@@ -355,6 +397,13 @@ export default function App() {
                         value={subject.gpa}
                         onChange={(e) =>
                           handleGpaChange(subject.id, e.target.value)
+                        }
+                        onFocus={handleInputFocus}
+                        onKeyDown={(e) =>
+                          handleFieldKeyDown(e, subject.id, "gpa")
+                        }
+                        enterKeyHint={
+                          index < subjects.length - 1 ? "next" : "done"
                         }
                         className={`liquid-input text-center ${
                           fieldHasError(subject.id, "gpa")
